@@ -1,5 +1,7 @@
 "use client"
 
+import { supabase } from "@/lib/supabase"
+
 export type InstitutionSettings = {
   logoBase64: string | null
   teacherName: string
@@ -8,7 +10,7 @@ export type InstitutionSettings = {
   deceName: string
   decePhone: string
   highlightAlerts: boolean
-  language: "es" | "en" | "fr" // <--- Aquí agregamos la opción de idioma
+  language: "es" | "en" | "fr"
 }
 
 export const DEFAULT_INSTITUTION_SETTINGS: InstitutionSettings = {
@@ -19,30 +21,57 @@ export const DEFAULT_INSTITUTION_SETTINGS: InstitutionSettings = {
   deceName: "",
   decePhone: "",
   highlightAlerts: true,
-  language: "es", // <--- Aquí definimos que el idioma inicial sea Español
+  language: "es",
 }
 
-const SETTINGS_KEY = "institution_settings"
-
-export function loadInstitutionSettings(): InstitutionSettings {
-  if (typeof window === "undefined") return DEFAULT_INSTITUTION_SETTINGS
+// Carga los datos desde la nube de Supabase
+export async function loadInstitutionSettings(): Promise<InstitutionSettings> {
   try {
-    const stored = localStorage.getItem(SETTINGS_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      return { ...DEFAULT_INSTITUTION_SETTINGS, ...parsed }
+    const { data, error } = await supabase
+      .from('configuracion')
+      .select('*')
+      .eq('id', 1)
+      .single()
+
+    if (data && !error) {
+      return {
+        logoBase64: data.logo_base64 || null,
+        teacherName: data.nombre_docente || "",
+        institutionName: data.nombre_institucion || "",
+        institutionPhone: data.telefono_institucion || "",
+        deceName: data.encargado_vicerrectorado || "",
+        decePhone: data.telefono_vicerrectorado || "",
+        highlightAlerts: data.resaltar_alertas ?? true,
+        language: (data.idioma as "es" | "en" | "fr") || "es",
+      }
     }
   } catch (error) {
-    console.error("Error loading settings", error)
+    console.error("Error al cargar configuración desde la nube", error)
   }
   return DEFAULT_INSTITUTION_SETTINGS
 }
 
-export function saveInstitutionSettings(settings: InstitutionSettings) {
-  if (typeof window === "undefined") return
+// Guarda los datos en la nube de Supabase
+export async function saveInstitutionSettings(settings: InstitutionSettings): Promise<boolean> {
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+    const payload = {
+      id: 1, // ID único para la configuración global
+      logo_base64: settings.logoBase64,
+      nombre_docente: settings.teacherName,
+      nombre_institucion: settings.institutionName,
+      telefono_institucion: settings.institutionPhone,
+      encargado_vicerrectorado: settings.deceName,
+      telefono_vicerrectorado: settings.decePhone,
+      resaltar_alertas: settings.highlightAlerts,
+      idioma: settings.language
+    }
+
+    const { error } = await supabase.from('configuracion').upsert(payload)
+    
+    if (error) throw error
+    return true
   } catch (error) {
-    console.error("Error saving settings", error)
+    console.error("Error al guardar configuración en la nube", error)
+    return false
   }
 }

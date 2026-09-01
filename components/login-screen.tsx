@@ -1,105 +1,51 @@
 "use client"
 
-import { useState } from "react"
-import Image from "next/image"
+import { LogIn, School, UserCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Fingerprint, ScanFace, Loader2, KeyRound } from "lucide-react"
-import { useApp } from "@/lib/app-context"
+import { useState } from "react"
 
-export function LoginScreen() {
-  const { setIsAuthenticated } = useApp()
-  const [isScanning, setIsScanning] = useState(false)
+interface LoginScreenProps {
+  onLogin: () => void;
+}
 
-  const handleBiometricLogin = async () => {
-    setIsScanning(true)
-    // Simula una pequeña carga y fuerza la entrada
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setIsScanning(false)
-    setIsAuthenticated(true)
-  }
-
-  const bypassLogin = () => {
-    // Función directa y sin esperas para entrar en modo desarrollo
-    setIsAuthenticated(true)
-  }
+// EXPORTACIÓN NOMBRADA ESTRICTA
+export function LoginScreen({ onLogin }: LoginScreenProps) {
+  const [errorLogoColegio, setErrorLogoColegio] = useState(false);
+  const [errorLogoProfe, setErrorLogoProfe] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent flex flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur">
-        <CardContent className="pt-8 pb-10 px-6 flex flex-col items-center gap-6">
-          {/* Escudo institucional */}
-          <Image
-            src="/Logo_modesto-fondo.png"
-            alt="Escudo Unidad Educativa Fiscal Modesto Enrique Suárez Pimentel"
-            width={128}
-            height={128}
-            className="h-32 w-32 object-contain"
-            priority
-          />
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-50">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden p-8 flex flex-col items-center text-center space-y-6">
+        
+        <div className="w-32 h-32 mx-auto rounded-full overflow-hidden shadow-sm flex items-center justify-center bg-slate-100 border border-slate-200">
+           {!errorLogoColegio ? (
+             <img src="/Logo_modesto-fondo.png" alt="Logo Unidad Educativa" className="w-full h-full object-cover" onError={() => setErrorLogoColegio(true)} />
+           ) : (
+             <School className="w-16 h-16 text-slate-400" />
+           )}
+        </div>
 
-          {/* Título institucional */}
-          <div className="text-center space-y-1">
-            <h1 className="text-lg font-bold text-foreground leading-snug max-w-xs">
-              Unidad Educativa Fiscal Modesto Enrique Suárez Pimentel
-            </h1>
+        <h1 className="text-2xl font-bold text-slate-900 leading-tight">
+          Unidad Educativa Fiscal<br/>Modesto Enrique Suárez Pimentel
+        </h1>
+
+        <div className="space-y-2 pt-2">
+          <div className="w-24 h-24 mx-auto rounded-full overflow-hidden shadow-sm border border-slate-200 flex items-center justify-center bg-slate-100">
+             {!errorLogoProfe ? (
+               <img src="/El_profe_Segundo_fondo.png" alt="Logo Profe Segundo" className="w-full h-full object-cover" onError={() => setErrorLogoProfe(true)} />
+             ) : (
+               <UserCircle className="w-12 h-12 text-slate-400" />
+             )}
           </div>
+          <p className="text-slate-600 font-medium text-lg">Profe Segundo</p>
+        </div>
 
-          {/* Perfil del profesor */}
-          <div className="flex flex-col items-center gap-2">
-            <Image
-              src="/El_profe_Segundo_fondo.png"
-              alt="Profe Segundo"
-              width={80}
-              height={80}
-              className="h-20 w-20 rounded-full object-cover ring-2 ring-primary/20"
-            />
-            <p className="text-sm font-medium text-muted-foreground">Profe Segundo</p>
-          </div>
-
-          {/* Biometric Login Button Original */}
-          <Button
-            onClick={handleBiometricLogin}
-            disabled={isScanning}
-            size="lg"
-            className="w-full h-16 text-lg font-semibold gap-3 shadow-lg hover:shadow-xl transition-all bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            {isScanning ? (
-              <>
-                <Loader2 className="w-6 h-6 animate-spin" />
-                Escaneando...
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <Fingerprint className="w-6 h-6" />
-                  <ScanFace className="w-6 h-6" />
-                </div>
-                Acceder con Biometría
-              </>
-            )}
+        <div className="w-full pt-6">
+          <Button onClick={() => onLogin()} className="w-full h-14 text-lg font-bold bg-[#1d4ed8] hover:bg-blue-700 text-white rounded-xl shadow-md transition-transform hover:scale-105 flex items-center justify-center gap-2">
+            <LogIn className="w-6 h-6" /> Ingresar al Sistema
           </Button>
-
-          {/* NUEVO BOTÓN DE ACCESO DIRECTO PARA DESARROLLO */}
-          <Button
-            onClick={bypassLogin}
-            variant="secondary"
-            className="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold"
-          >
-            <KeyRound className="w-4 h-4 mr-2" />
-            Acceso Directo (Pruebas)
-          </Button>
-
-          <p className="text-xs text-muted-foreground text-center">
-            Use su huella dactilar o reconocimiento facial para acceder
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Footer */}
-      <p className="mt-8 text-xs text-muted-foreground">
-        © 2026 Asistencia IA - Todos los derechos reservados
-      </p>
+        </div>
+      </div>
     </div>
   )
 }

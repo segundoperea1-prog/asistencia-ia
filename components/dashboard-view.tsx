@@ -152,7 +152,7 @@ export function DashboardView() {
                           window.open(`https://wa.me/${d}?text=${encodeURIComponent(msg)}`, "_blank");
                         }}>Notificar Rep.</Button>
                         
-                        {settings.decePhone && (
+                        {(settings as any)?.decePhone && (
                           <Button size="sm" variant="outline" className="border-rose-500 text-rose-600 flex-1 sm:flex-none" onClick={() => {
                             const d = normalizeWhatsAppPhone(settings.decePhone);
                             // Mensaje de WhatsApp interno actualizado a Vicerrectorado

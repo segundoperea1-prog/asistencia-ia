@@ -128,9 +128,9 @@ export function ReportsView() {
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet("Consolidado Asistencia")
 
-    if (settings.logoBase64 && settings.logoBase64.includes("base64,")) {
+    if ((settings as any)?.logoBase64 && (settings as any)?.logoBase64.includes("base64,")) {
       try {
-        const base64Data = settings.logoBase64.split("base64,")[1]
+        const base64Data = (settings as any)?.logoBase64.split("base64,")[1]
         const imageId = workbook.addImage({
           base64: base64Data,
           extension: "png",

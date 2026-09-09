@@ -154,7 +154,7 @@ export function DashboardView() {
                         
                         {(settings as any)?.decePhone && (
                           <Button size="sm" variant="outline" className="border-rose-500 text-rose-600 flex-1 sm:flex-none" onClick={() => {
-                            const d = normalizeWhatsAppPhone(settings.decePhone);
+                            const d = normalizeWhatsAppPhone((settings as any)?.decePhone);
                             // Mensaje de WhatsApp interno actualizado a Vicerrectorado
                             const msg = `Reporte Vicerrectorado: El estudiante ${alert.student.nombres} del curso ${alert.student.curso} acumula ${totalIncidencias} incidencias (${alert.absent} faltas y ${alert.late} atrasos). Solicitamos su intervención.`;
                             window.open(`https://wa.me/${d}?text=${encodeURIComponent(msg)}`, "_blank");

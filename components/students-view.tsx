@@ -261,15 +261,24 @@ export function StudentsView() {
     const telefonoParaEnviar = estudiante?.telefono_representante || estudiante?.telefono_estudiante;
     if (!telefonoParaEnviar) return alert("Estudiante sin número registrado.");
     
-    // El método replace limpia el número, dejando solo los dígitos.
-    const formattedPhone = String(telefonoParaEnviar).replace(/\D/g, "");
+    // Algoritmo de limpieza de formato telefónico
+    let cleanPhone = String(telefonoParaEnviar).replace(/\D/g, "");
+    
+    if (cleanPhone.startsWith("593")) {
+      cleanPhone = cleanPhone.substring(3);
+    }
+    
+    if (cleanPhone.startsWith("0")) {
+      cleanPhone = cleanPhone.substring(1);
+    }
+    
+    const finalPhone = `593${cleanPhone}`;
     
     const instName = settings.institutionName?.toUpperCase() || "ESC DE EDUC BÁSICA FISCOMISIONAL MADRE DEL SALVADOR";
     const docName = settings.teacherName || "El Docente";
     const message = `${instName}\n\nEstimado representante, le informamos que el estudiante ${estudiante.nombres} ha sido marcado como: *${status}* el día de hoy.\n\nAtentamente,\n${docName}`;
     
-    // Aquí está la corrección: Se genera el enlace usando el formattedPhone directamente (que ya incluye el 593 desde la base de datos).
-    window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`, '_blank');
     
     setNotificadosIndividuales(prev => new Set(prev).add(estudiante.id));
   };

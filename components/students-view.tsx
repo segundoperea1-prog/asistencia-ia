@@ -143,7 +143,8 @@ export function StudentsView() {
   const [telEstudiante, setTelEstudiante] = useState("");
   const [fotoUrl, setFotoUrl] = useState("");
 
-  const [settings, setSettings] = useState(() => loadInstitutionSettings());
+  // SOLUCIÓN ARQUITECTÓNICA: Inicializamos de forma segura para evitar el error de Promesa
+  const [settings, setSettings] = useState<any>({});
   const [fechaActual, setFechaActual] = useState("Cargando fecha...");
 
   const COURSE_ORDER: Record<string, number> = {
@@ -158,10 +159,18 @@ export function StudentsView() {
     });
     setFechaActual(str.charAt(0).toUpperCase() + str.slice(1));
 
-    setSettings(loadInstitutionSettings());
     async function loadStudentsAndAttendance() {
       try {
         setLoading(true);
+        
+        // Resolvemos la promesa de configuración antes de continuar
+        try {
+          const resolvedSettings = await loadInstitutionSettings();
+          setSettings(resolvedSettings || {});
+        } catch (error) {
+          console.error("Error al cargar la configuración:", error);
+        }
+
         const hoyISO = new Date().toISOString().split('T')[0];
         
         const [studentsRes, asistenciaRes] = await Promise.all([
@@ -201,8 +210,8 @@ export function StudentsView() {
       return;
     }
     const formattedPhone = String(telefonoParaEnviar).replace(/\D/g, "");
-    const instName = settings.institutionName?.toUpperCase() || "UNIDAD EDUCATIVA FISCAL MODESTO ENRIQUE SUÁREZ PIMENTEL";
-    const docName = settings.teacherName || "El Docente";
+    const instName = settings?.institutionName?.toUpperCase() || "UNIDAD EDUCATIVA FISCAL MODESTO ENRIQUE SUÁREZ PIMENTEL";
+    const docName = settings?.teacherName || "El Docente";
 
     const message = `${instName}\n\nEstimado representante, le informamos que el estudiante ${estudiante.nombres} ha sido marcado como: *${status}* el día de hoy.\n\nAtentamente,\n${docName}`;
     
@@ -261,7 +270,6 @@ export function StudentsView() {
     const printWindow = window.open('', '_blank');
     const qrSvg = document.getElementById(`qr-hidden-${s.id}`)?.innerHTML || '';
     
-    // Algoritmo de respaldo: Genera un avatar dinámico si el estudiante no posee fotografía
     const fotoUrl = s.fotos_rostro?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.nombres)}&background=01579b&color=fff&size=200`;
 
     printWindow?.document.write(`
@@ -423,7 +431,6 @@ export function StudentsView() {
     const printWindow = window.open('', '_blank');
     let cardsHtml = '';
 
-    // El algoritmo recorre todos los alumnos actualmente filtrados en la pantalla
     filteredStudents.forEach(s => {
       const qrSvg = document.getElementById(`qr-hidden-${s.id}`)?.innerHTML || '';
       const fotoUrl = s.fotos_rostro?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.nombres)}&background=01579b&color=fff&size=200`;
@@ -470,7 +477,7 @@ export function StudentsView() {
               .grid-container {
                   display: grid;
                   grid-template-columns: repeat(3, 5.5cm);
-                  gap: 10mm 8mm; /* Espacio vertical y horizontal para facilitar el recorte con guillotina */
+                  gap: 10mm 8mm; 
                   justify-content: center;
                   padding-top: 5mm;
               }
@@ -478,14 +485,14 @@ export function StudentsView() {
                   width: 5.5cm; 
                   height: 9.0cm; 
                   background: linear-gradient(135deg, #ffffff 0%, #e1f5fe 100%); 
-                  border: 2px solid #01579b; /* Borde guía para recorte */
+                  border: 2px solid #01579b; 
                   border-radius: 8px; 
                   text-align: center; 
                   box-sizing: border-box; 
                   overflow: hidden; 
                   display: flex;
                   flex-direction: column;
-                  page-break-inside: avoid; /* Evita que la impresora corte una credencial a la mitad */
+                  page-break-inside: avoid; 
               }
               .encabezado { background-color: #01579b; color: white; padding: 6px 4px; display: flex; align-items: center; justify-content: center; gap: 5px; }
               .logo-container { width: 1.2cm; height: 1.2cm; background-color: white; border-radius: 50%; padding: 2px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; overflow: hidden; }
@@ -798,8 +805,8 @@ export function StudentsView() {
                           const claveNotif = `${item.nombre}_${indiceCursoSeleccionado}_${indiceMateriaSeleccionada}_${columnaSeleccionada}`;
                           const yaNotificadoNota = notificadosNotas.has(claveNotif);
                           
-                          const instName = settings.institutionName?.toUpperCase() || "UNIDAD EDUCATIVA FISCAL MODESTO ENRIQUE SUÁREZ PIMENTEL";
-                          const docName = settings.teacherName || "El Docente";
+                          const instName = settings?.institutionName?.toUpperCase() || "UNIDAD EDUCATIVA FISCAL MODESTO ENRIQUE SUÁREZ PIMENTEL";
+                          const docName = settings?.teacherName || "El Docente";
                           const telefonoParaEnviar = estudianteDB?.telefono_representante || estudianteDB?.telefono_estudiante;
 
                           // TITULO CON FECHA LIMPIA EN ESPAÑOL

@@ -68,15 +68,12 @@ function coincidenNombres(nombreDB: string, nombreExcel: string) {
   return false;
 }
 
-// FUNCIÓN PARA DAR FORMATO ELEGANTE A LA FECHA EN ESPAÑOL
 function formatearTituloActividad(tituloCompleto: string) {
   if (!tituloCompleto) return "";
 
-  // Si contiene el separador " - ", dividimos el nombre de la actividad y la fecha
   const partes = tituloCompleto.split(" - ");
   if (partes.length >= 2) {
     const actividad = partes[0].trim();
-    // Limpiamos textos entre paréntesis como "(hora de Ecuador)" para que la fecha se lea bien
     const textoFechaLimpio = partes.slice(1).join(" - ").replace(/\s*\(.*\)\s*/g, "").trim();
 
     const fechaObj = new Date(textoFechaLimpio);
@@ -92,7 +89,6 @@ function formatearTituloActividad(tituloCompleto: string) {
     }
   }
 
-  // Si no tenía guión, intentamos formatear la cadena completa
   const textoLimpio = tituloCompleto.replace(/\s*\(.*\)\s*/g, "").trim();
   const fechaObj = new Date(textoLimpio);
   if (!isNaN(fechaObj.getTime())) {
@@ -117,11 +113,9 @@ export function StudentsView() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
-  // MODAL NOTIFICACIÓN MANUAL
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const [bulkMessage, setBulkMessage] = useState("UNIDAD EDUCATIVA FISCAL MODESTO ENRIQUE SUÁREZ PIMENTEL.\n\nEstimados padres de familia:\n");
 
-  // MODAL CALIFICACIONES DESDE LA NUBE (SCRIPT)
   const [isGradesModalOpen, setIsGradesModalOpen] = useState(false);
   const [cargandoNube, setCargandoNube] = useState(false);
   const [datosNube, setDatosNube] = useState<CursoNube[]>([]);
@@ -130,7 +124,6 @@ export function StudentsView() {
   const [indiceMateriaSeleccionada, setIndiceMateriaSeleccionada] = useState<number>(0);
   const [columnaSeleccionada, setColumnaSeleccionada] = useState<number | null>(null);
 
-  // SEGUIMIENTO DE ENVÍOS
   const [notificadosIndividuales, setNotificadosIndividuales] = useState<Set<string>>(new Set());
   const [notificadosNotas, setNotificadosNotas] = useState<Set<string>>(new Set());
   const [ocultarEnviados, setOcultarEnviados] = useState(false);
@@ -142,8 +135,8 @@ export function StudentsView() {
   const [telRepresentante, setTelRepresentante] = useState("");
   const [telEstudiante, setTelEstudiante] = useState("");
   const [fotoUrl, setFotoUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
-  // SOLUCIÓN ARQUITECTÓNICA: Inicializamos de forma segura para evitar el error de Promesa
   const [settings, setSettings] = useState<any>({});
   const [fechaActual, setFechaActual] = useState("Cargando fecha...");
 
@@ -163,7 +156,6 @@ export function StudentsView() {
       try {
         setLoading(true);
         
-        // Resolvemos la promesa de configuración antes de continuar
         try {
           const resolvedSettings = await loadInstitutionSettings();
           setSettings(resolvedSettings || {});
@@ -202,6 +194,30 @@ export function StudentsView() {
     }
     loadStudentsAndAttendance();
   }, []);
+
+  // INTEGRACIÓN SUPABASE STORAGE: Convierte Base64 a Blob y lo sube al bucket
+  const uploadFotoToBucket = async (base64Str: string) => {
+    if (!base64Str.startsWith('data:image')) return base64Str;
+    
+    const response = await fetch(base64Str);
+    const blob = await response.blob();
+    const fileName = `foto_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+    
+    const { data, error } = await supabase.storage
+      .from('fotos_estudiantes')
+      .upload(fileName, blob, {
+        contentType: 'image/jpeg',
+        upsert: true
+      });
+      
+    if (error) throw new Error("Error en Supabase Storage: " + error.message);
+    
+    const { data: publicUrlData } = supabase.storage
+      .from('fotos_estudiantes')
+      .getPublicUrl(fileName);
+      
+    return publicUrlData.publicUrl;
+  };
 
   const sendWhatsApp = (estudiante: any, status: string) => {
     const telefonoParaEnviar = estudiante?.telefono_representante || estudiante?.telefono_estudiante;
@@ -265,7 +281,6 @@ export function StudentsView() {
     setColumnaSeleccionada(primerCol);
   };
 
-  // IMPRESIÓN INDIVIDUAL
   const printCredential = (s: any) => {
     const printWindow = window.open('', '_blank');
     const qrSvg = document.getElementById(`qr-hidden-${s.id}`)?.innerHTML || '';
@@ -421,7 +436,6 @@ export function StudentsView() {
     printWindow?.document.close();
   };
 
-  // IMPRESIÓN MASIVA (GRID EN FORMATO A4)
   const printAllCredentials = () => {
     if (filteredStudents.length === 0) {
       alert("No hay estudiantes en pantalla para imprimir. Seleccione un curso primero.");
@@ -463,7 +477,6 @@ export function StudentsView() {
       <head>
           <title>Impresión Masiva - ${filterCourse}</title>
           <style>
-              /* Configuración estricta para formato A4 */
               @page { size: A4; margin: 10mm; }
               body { 
                   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -473,7 +486,6 @@ export function StudentsView() {
                   -webkit-print-color-adjust: exact !important; 
                   print-color-adjust: exact !important;
               }
-              /* Cuadrícula optimizada para alojar hasta 9 credenciales por hoja A4 */
               .grid-container {
                   display: grid;
                   grid-template-columns: repeat(3, 5.5cm);
@@ -563,13 +575,31 @@ export function StudentsView() {
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const newStudent = { nombres: nombre, curso: curso, telefono_representante: telRepresentante, telefono_estudiante: telEstudiante, fotos_rostro: fotoUrl ? [fotoUrl] : [] };
+      setIsUploading(true);
+      let finalFotoUrls: string[] = [];
+      
+      if (fotoUrl) {
+        if (fotoUrl.startsWith('data:image')) {
+          const publicBucketUrl = await uploadFotoToBucket(fotoUrl);
+          finalFotoUrls = [publicBucketUrl];
+        } else {
+          finalFotoUrls = [fotoUrl];
+        }
+      }
+
+      const newStudent = { nombres: nombre, curso: curso, telefono_representante: telRepresentante, telefono_estudiante: telEstudiante, fotos_rostro: finalFotoUrls };
       const { data, error } = await supabase.from("estudiantes").insert([newStudent]).select();
+      
       if (error) throw error;
       if (data) setStudents(prev => [...prev, data[0]]);
+      
       setIsAddModalOpen(false);
-      alert("Estudiante agregado correctamente");
-    } catch (err: any) { alert("Error al agregar estudiante: " + err.message); }
+      alert("Estudiante agregado correctamente. La fotografía ha sido asegurada en la nube.");
+    } catch (err: any) { 
+      alert("Error al agregar estudiante: " + err.message); 
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const openEditModal = (student: any) => {
@@ -582,13 +612,32 @@ export function StudentsView() {
     e.preventDefault();
     if (!selectedStudent) return;
     try {
-      const updatedData = { nombres: nombre, curso: curso, telefono_representante: telRepresentante, telefono_estudiante: telEstudiante, fotos_rostro: fotoUrl ? [fotoUrl] : [] };
+      setIsUploading(true);
+      let finalFotoUrls: string[] = [];
+      
+      if (fotoUrl) {
+        if (fotoUrl.startsWith('data:image')) {
+          const publicBucketUrl = await uploadFotoToBucket(fotoUrl);
+          finalFotoUrls = [publicBucketUrl];
+        } else {
+          finalFotoUrls = [fotoUrl];
+        }
+      }
+
+      const updatedData = { nombres: nombre, curso: curso, telefono_representante: telRepresentante, telefono_estudiante: telEstudiante, fotos_rostro: finalFotoUrls };
       const { error } = await supabase.from("estudiantes").update(updatedData).eq("id", selectedStudent.id);
+      
       if (error) throw error;
+      
       setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, ...updatedData } : s));
-      setIsEditModalOpen(false); setSelectedStudent(null);
-      alert("Estudiante actualizado correctamente");
-    } catch (err: any) { alert("Error al actualizar estudiante: " + err.message); }
+      setIsEditModalOpen(false); 
+      setSelectedStudent(null);
+      alert("Estudiante actualizado correctamente. La fotografía ha sido asegurada en la nube.");
+    } catch (err: any) { 
+      alert("Error al actualizar estudiante: " + err.message); 
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDeleteStudent = async (id: string) => {
@@ -941,7 +990,7 @@ export function StudentsView() {
         </div>
       )}
 
-      {/* MODALES CRUD */}
+      {/* MODALES CRUD ACTUALIZADOS */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-[1000] bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
@@ -983,8 +1032,10 @@ export function StudentsView() {
                 <Input value={telEstudiante} onChange={e => setTelEstudiante(e.target.value)} placeholder="Ej. 0912345678" />
               </div>
               <div className="pt-4 flex gap-3">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setIsAddModalOpen(false)}>Cancelar</Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 flex-1 text-white font-bold">Guardar</Button>
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setIsAddModalOpen(false)} disabled={isUploading}>Cancelar</Button>
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 flex-1 text-white font-bold" disabled={isUploading}>
+                  {isUploading ? "Subiendo..." : "Guardar"}
+                </Button>
               </div>
             </form>
           </div>
@@ -1034,8 +1085,10 @@ export function StudentsView() {
               <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-between">
                 <Button type="button" variant="destructive" className="bg-red-600 hover:bg-red-700 font-bold w-full sm:w-auto mb-2 sm:mb-0" onClick={() => handleDeleteStudent(selectedStudent.id)}>Eliminar</Button>
                 <div className="flex gap-2 w-full sm:w-auto">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsEditModalOpen(false)}>Cancelar</Button>
-                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold flex-1">Actualizar</Button>
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsEditModalOpen(false)} disabled={isUploading}>Cancelar</Button>
+                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold flex-1" disabled={isUploading}>
+                    {isUploading ? "Subiendo..." : "Actualizar"}
+                  </Button>
                 </div>
               </div>
             </form>

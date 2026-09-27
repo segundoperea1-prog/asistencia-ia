@@ -50,12 +50,21 @@ export function ReportsView() {
   const [filterMonth, setFilterMonth] = useState(currentMonth)
   const [filterCourse, setFilterCourse] = useState("ALL")
   const [periodType, setPeriodType] = useState<"MONTH" | "YEAR">("MONTH")
-  const [settings, setSettings] = useState(() => loadInstitutionSettings())
+  
+  // SOLUCIÓN ARQUITECTÓNICA: Inicializamos el estado vacío y resolvemos la promesa en el useEffect
+  const [settings, setSettings] = useState<any>({})
 
   useEffect(() => {
-    setSettings(loadInstitutionSettings())
     async function loadData() {
       setLoading(true)
+      
+      try {
+        // Resolvemos la promesa correctamente usando await
+        const resolvedSettings = await loadInstitutionSettings();
+        setSettings(resolvedSettings || {});
+      } catch (error) {
+        console.error("Error al cargar la configuración de la institución:", error);
+      }
       
       const { data: stdData } = await supabase.from("estudiantes").select("id, nombres, curso")
       if (stdData) setStudents(stdData as Student[])
@@ -128,9 +137,9 @@ export function ReportsView() {
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet("Consolidado Asistencia")
 
-    if ((settings as any)?.logoBase64 && (settings as any)?.logoBase64.includes("base64,")) {
+    if (settings?.logoBase64 && settings?.logoBase64.includes("base64,")) {
       try {
-        const base64Data = (settings as any)?.logoBase64.split("base64,")[1]
+        const base64Data = settings?.logoBase64.split("base64,")[1]
         const imageId = workbook.addImage({
           base64: base64Data,
           extension: "png",
@@ -150,10 +159,10 @@ export function ReportsView() {
     worksheet.getCell("C1").value = `AÑO LECTIVO ${anioReporte} - ${anioSiguiente}`
     worksheet.getCell("C1").font = { bold: true, size: 12, color: { argb: "1E40AF" } } as any
 
-    worksheet.getCell("C2").value = settings.institutionName?.toUpperCase() || "UNIDAD EDUCATIVA FISCAL MODESTO ENRIQUE SUÁREZ PIMENTEL"
+    worksheet.getCell("C2").value = settings?.institutionName?.toUpperCase() || "UNIDAD EDUCATIVA FISCAL MODESTO ENRIQUE SUÁREZ PIMENTEL"
     worksheet.getCell("C2").font = { bold: true, size: 14 } as any
 
-    worksheet.getCell("C3").value = `DOCENTE: ${settings.teacherName?.toUpperCase() || "REPORTE OFICIAL"}`
+    worksheet.getCell("C3").value = `DOCENTE: ${settings?.teacherName?.toUpperCase() || "REPORTE OFICIAL"}`
     worksheet.getCell("C3").font = { name: 'Arial', size: 10, italic: true } as any
 
     worksheet.getCell("C4").value = `Curso: ${filterCourse === "ALL" ? "Todos los Cursos" : filterCourse}  |  Periodo: ${periodType === "YEAR" ? "Histórico Anual" : filterMonth}`
@@ -208,7 +217,6 @@ export function ReportsView() {
     worksheet.columns.forEach((column, index) => {
       let maxLen = 0
       column.eachCell?.({ includeEmpty: false }, (cell) => {
-        // AQUÍ ESTÁ LA CORRECCIÓN: Number(cell.row)
         if (cell.value && Number(cell.row) > 4) {
           const len = cell.value.toString().length
           if (len > maxLen) maxLen = len

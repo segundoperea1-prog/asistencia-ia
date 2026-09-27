@@ -1,16 +1,23 @@
 "use client"
 
-import { useState } from "react"
-// IMPORTACIÓN CON LLAVES
+import { AppProvider, useApp } from "@/lib/app-context"
 import { LoginScreen } from "@/components/login-screen"
-import { StudentsView } from "@/components/students-view"
+import { MainLayout } from "@/components/main-layout"
 
-export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+function AppContent() {
+  const { isAuthenticated } = useApp()
 
-  if (!isLoggedIn) {
-    return <LoginScreen onLogin={() => setIsLoggedIn(true)} />
+  if (!isAuthenticated) {
+    return <LoginScreen />
   }
 
-  return <StudentsView />
+  return <MainLayout />
+}
+
+export default function Home() {
+  return (
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
+  )
 }

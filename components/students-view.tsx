@@ -9,8 +9,8 @@ import { QRCodeSVG } from "qrcode.react"
 import { Scanner } from '@yudiel/react-qr-scanner'
 import { loadInstitutionSettings } from "@/lib/institution-settings"
 
-// DIRECCIÓN OFICIAL DE SU SCRIPT EN LA NUBE
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby6TkL7QdmKRAunsHW5416ySrK13xuYtAdrZVnyDDIni2jeKf5EWaBCcRLgcTSh4lI/exec";
+// DIRECCIÓN OFICIAL DE SU SCRIPT EN LA NUBE ACTUALIZADA
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwyc5qGDC4lretcJOolcWGtdR75X_AeKOihGAaLG6O8sRkwl8xHu7zsAjGNQtcfT04i/exec";
 
 type ActividadNube = {
   colIndex: number;
@@ -195,7 +195,6 @@ export function StudentsView() {
     loadStudentsAndAttendance();
   }, []);
 
-  // INTEGRACIÓN SUPABASE STORAGE: Convierte Base64 a Blob y lo sube al bucket
   const uploadFotoToBucket = async (base64Str: string) => {
     if (!base64Str.startsWith('data:image')) return base64Str;
     
